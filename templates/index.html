@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Global Weather Analysis Dashboard</title>
+<style>
+:root { --navy:#1B3A6B; --blue:#2E75B6; --teal:#1ABC9C; --orange:#E67E22; --light:#EEF2F8; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',sans-serif; background:#f0f4f8; color:#222; }
+
+nav { background:var(--navy); color:white; padding:1rem 2rem; display:flex;
+      align-items:center; justify-content:space-between; }
+nav h1 { font-size:1.3rem; font-weight:700; }
+nav span { font-size:0.8rem; opacity:0.7; }
+
+.hero { background:linear-gradient(135deg, #1B3A6B 0%, #1ABC9C 100%);
+        color:white; padding:2.5rem 2rem; text-align:center; }
+.hero h2 { font-size:1.9rem; margin-bottom:0.5rem; }
+.hero p { opacity:0.85; max-width:600px; margin:0 auto 1.5rem; }
+
+.search-bar { display:flex; gap:0.5rem; max-width:500px; margin:0 auto; }
+.search-bar input { flex:1; padding:0.7rem 1rem; border:none; border-radius:8px;
+                    font-size:1rem; outline:none; }
+.search-bar button { padding:0.7rem 1.5rem; background:var(--orange); color:white;
+                     border:none; border-radius:8px; font-size:1rem;
+                     cursor:pointer; font-weight:600; transition:background 0.2s; }
+.search-bar button:hover { background:#d35400; }
+
+main { max-width:1100px; margin:2rem auto; padding:0 1.5rem; }
+
+.current-weather { background:white; border-radius:14px; padding:2rem;
+                   box-shadow:0 2px 12px rgba(0,0,0,0.08); margin-bottom:2rem;
+                   display:none; }
+.weather-header { display:flex; justify-content:space-between; align-items:flex-start;
+                  flex-wrap:wrap; gap:1rem; }
+.city-name { font-size:2rem; font-weight:800; color:var(--navy); }
+.weather-temp { font-size:3.5rem; font-weight:800; color:var(--navy); }
+.weather-desc { font-size:1.1rem; color:#666; text-transform:capitalize; }
+
+.weather-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+                gap:1rem; margin-top:1.5rem; }
+.w-card { background:var(--light); border-radius:10px; padding:1rem; text-align:center; }
+.w-card .icon { font-size:1.5rem; margin-bottom:0.3rem; }
+.w-card .val  { font-size:1.3rem; font-weight:700; color:var(--navy); }
+.w-card .lbl  { font-size:0.78rem; color:#777; margin-top:0.2rem; }
+
+.section-title { font-size:1.3rem; font-weight:700; color:var(--navy);
+                 border-bottom:3px solid var(--navy); padding-bottom:0.4rem;
+                 margin-bottom:1.5rem; }
+
+.cities-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+               gap:1rem; margin-bottom:2rem; }
+.city-card { background:white; border-radius:12px; padding:1.2rem;
+             box-shadow:0 2px 8px rgba(0,0,0,0.06); cursor:pointer;
+             transition:transform 0.2s, box-shadow 0.2s; border-top:4px solid var(--navy); }
+.city-card:hover { transform:translateY(-3px); box-shadow:0 6px 20px rgba(0,0,0,0.12); }
+.city-card h3 { font-size:1rem; font-weight:700; color:var(--navy); margin-bottom:0.4rem; }
+.city-card .temp-big { font-size:2rem; font-weight:800; }
+.city-card .details { font-size:0.82rem; color:#777; margin-top:0.3rem; }
+.city-card.loading { opacity:0.5; pointer-events:none; }
+
+.forecast-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr));
+                 gap:0.8rem; background:white; border-radius:12px; padding:1.5rem;
+                 box-shadow:0 2px 12px rgba(0,0,0,0.08); margin-bottom:2rem; }
+.forecast-day { text-align:center; padding:0.8rem 0.5rem; border-radius:8px;
+                background:var(--light); }
+.forecast-day .day-name { font-size:0.8rem; font-weight:600; color:#555; }
+.forecast-day .day-icon { font-size:1.6rem; margin:0.3rem 0; }
+.forecast-day .day-temp { font-size:1rem; font-weight:700; color:var(--navy); }
+.forecast-day .day-desc { font-size:0.72rem; color:#888; }
+
+.analysis-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;
+                 margin-bottom:2rem; }
+.analysis-card { background:white; border-radius:12px; padding:1.5rem;
+                 box-shadow:0 2px 12px rgba(0,0,0,0.08); }
+.analysis-card h3 { color:var(--navy); font-size:1rem; margin-bottom:1rem; font-weight:700; }
+
+.bar-chart { display:flex; flex-direction:column; gap:0.6rem; }
+.bar-row { display:flex; align-items:center; gap:0.7rem; }
+.bar-row .city-lbl { width:90px; font-size:0.82rem; color:#555; flex-shrink:0; }
+.bar-outer { flex:1; background:#eee; border-radius:20px; height:10px; overflow:hidden; }
+.bar-inner { height:100%; border-radius:20px; transition:width 1s ease; }
+.bar-val { width:45px; font-size:0.82rem; font-weight:600; color:var(--navy); text-align:right; }
+
+.error-msg { background:#fdecea; border:1px solid #f5c6cb; border-radius:8px;
+             padding:1rem; color:#721c24; margin-bottom:1rem; display:none; }
+
+footer { background:var(--navy); color:rgba(255,255,255,0.7); text-align:center;
+         padding:1.5rem; font-size:0.85rem; margin-top:3rem; }
+footer a { color:rgba(255,255,255,0.9); }
+
+@media(max-width:600px) {
+  .analysis-grid { grid-template-columns:1fr; }
+  .weather-temp { font-size:2.5rem; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <h1>🌍 Global Weather Analysis Dashboard</h1>
+  <span>Real-time worldwide weather data & analysis</span>
+</nav>
+
+<div class="hero">
+  <h2>Real-Time Global Weather Intelligence</h2>
+  <p>Live weather data for cities worldwide — temperature, humidity, wind,
+     pressure, forecasts, and comparative analysis powered by OpenWeatherMap API.</p>
+  <div class="search-bar">
+    <input type="text" id="cityInput" placeholder="Search any city worldwide..." 
+           onkeypress="if(event.key==='Enter') searchCity()">
+    <button onclick="searchCity()">🔍 Search</button>
+  </div>
+</div>
+
+<main>
+  <div class="error-msg" id="errorMsg"></div>
+
+  <!-- Current Weather Card -->
+  <div class="current-weather" id="currentWeather">
+    <div class="weather-header">
+      <div>
+        <div class="city-name" id="cityName">—</div>
+        <div class="weather-desc" id="weatherDesc">—</div>
+        <div style="font-size:0.85rem; color:#999; margin-top:0.2rem" id="localTime">—</div>
+      </div>
+      <div style="text-align:right">
+        <div class="weather-temp" id="tempVal">—</div>
+        <div style="color:#888; font-size:0.9rem">Feels like <span id="feelsLike">—</span></div>
+      </div>
+    </div>
+    <div class="weather-grid">
+      <div class="w-card"><div class="icon">💧</div><div class="val" id="humidity">—</div><div class="lbl">Humidity</div></div>
+      <div class="w-card"><div class="icon">💨</div><div class="val" id="windSpeed">—</div><div class="lbl">Wind Speed</div></div>
+      <div class="w-card"><div class="icon">🌡️</div><div class="val" id="pressure">—</div><div class="lbl">Pressure</div></div>
+      <div class="w-card"><div class="icon">👁️</div><div class="val" id="visibility">—</div><div class="lbl">Visibility</div></div>
+      <div class="w-card"><div class="icon">☀️</div><div class="val" id="sunrise">—</div><div class="lbl">Sunrise</div></div>
+      <div class="w-card"><div class="icon">🌅</div><div class="val" id="sunset">—</div><div class="lbl">Sunset</div></div>
+    </div>
+  </div>
+
+  <!-- Global Cities -->
+  <h2 class="section-title">🌐 Global Cities — Live Weather</h2>
+  <div class="cities-grid" id="citiesGrid">
+    <!-- Populated by JS -->
+  </div>
+
+  <!-- Comparative Analysis -->
+  <h2 class="section-title">📊 Comparative Weather Analysis</h2>
+  <div class="analysis-grid">
+    <div class="analysis-card">
+      <h3>🌡️ Temperature Comparison (°C)</h3>
+      <div class="bar-chart" id="tempChart"></div>
+    </div>
+    <div class="analysis-card">
+      <h3>💧 Humidity Comparison (%)</h3>
+      <div class="bar-chart" id="humidChart"></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <p>Global Weather Analysis Dashboard | Harender Deep Singh | B.E. AI & ML, Sambhram Institute of Technology</p>
+  <p style="margin-top:0.3rem">Data: <a href="https://openweathermap.org" target="_blank">OpenWeatherMap API</a> | Built with Python · Django · REST API · HTML/CSS/JS</p>
+</footer>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+// Replace with your OpenWeatherMap API key: https://openweathermap.org/api
+const API_KEY = 'YOUR_OPENWEATHERMAP_API_KEY';
+const BASE_URL = 'https://api.openweathermap.org/data/2.5';
+
+const GLOBAL_CITIES = [
+  { name: 'Bengaluru', country: 'IN' },
+  { name: 'Mumbai',    country: 'IN' },
+  { name: 'Delhi',     country: 'IN' },
+  { name: 'London',    country: 'GB' },
+  { name: 'New York',  country: 'US' },
+  { name: 'Tokyo',     country: 'JP' },
+  { name: 'Sydney',    country: 'AU' },
+  { name: 'Dubai',     country: 'AE' },
+];
+
+const WEATHER_ICONS = {
+  Clear:'☀️', Clouds:'☁️', Rain:'🌧️', Drizzle:'🌦️',
+  Thunderstorm:'⛈️', Snow:'❄️', Mist:'🌫️', Haze:'🌫️', Fog:'🌫️'
+};
+
+function getIcon(main) { return WEATHER_ICONS[main] || '🌡️'; }
+function formatTime(unix, tz=0) {
+  return new Date((unix + tz) * 1000).toUTCString().slice(17,22);
+}
+
+// ── FETCH WEATHER ────────────────────────────────────────────────────────────
+async function fetchWeather(city) {
+  const url = `${BASE_URL}/weather?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`City "${city}" not found`);
+  return res.json();
+}
+
+// ── SEARCH ───────────────────────────────────────────────────────────────────
+async function searchCity() {
+  const city = document.getElementById('cityInput').value.trim();
+  if (!city) return;
+  showError('');
+  try {
+    const data = await fetchWeather(city);
+    displayCurrentWeather(data);
+  } catch(e) {
+    showError(e.message);
+  }
+}
+
+function displayCurrentWeather(d) {
+  document.getElementById('currentWeather').style.display = 'block';
+  document.getElementById('cityName').textContent    = `${d.name}, ${d.sys.country}`;
+  document.getElementById('weatherDesc').textContent = d.weather[0].description;
+  document.getElementById('localTime').textContent   = `Local time: ${formatTime(d.dt, d.timezone)}`;
+  document.getElementById('tempVal').textContent     = `${Math.round(d.main.temp)}°C`;
+  document.getElementById('feelsLike').textContent   = `${Math.round(d.main.feels_like)}°C`;
+  document.getElementById('humidity').textContent    = `${d.main.humidity}%`;
+  document.getElementById('windSpeed').textContent   = `${d.wind.speed} m/s`;
+  document.getElementById('pressure').textContent    = `${d.main.pressure} hPa`;
+  document.getElementById('visibility').textContent  = `${(d.visibility/1000).toFixed(1)} km`;
+  document.getElementById('sunrise').textContent     = formatTime(d.sys.sunrise, d.timezone);
+  document.getElementById('sunset').textContent      = formatTime(d.sys.sunset,  d.timezone);
+  document.getElementById('currentWeather').scrollIntoView({ behavior:'smooth' });
+}
+
+// ── CITIES GRID ──────────────────────────────────────────────────────────────
+async function loadCitiesGrid() {
+  const grid = document.getElementById('citiesGrid');
+  grid.innerHTML = '';
+
+  // Create placeholder cards
+  GLOBAL_CITIES.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'city-card loading';
+    card.id = `card-${c.name}`;
+    card.innerHTML = `<h3>${c.name}, ${c.country}</h3><div class="temp-big">...</div>`;
+    grid.appendChild(card);
+  });
+
+  const weatherData = [];
+  for (const c of GLOBAL_CITIES) {
+    try {
+      const d = await fetchWeather(`${c.name},${c.country}`);
+      const card = document.getElementById(`card-${c.name}`);
+      const icon = getIcon(d.weather[0].main);
+      card.className = 'city-card';
+      card.innerHTML = `
+        <h3>${icon} ${d.name}, ${d.sys.country}</h3>
+        <div class="temp-big" style="color:${tempColor(d.main.temp)}">${Math.round(d.main.temp)}°C</div>
+        <div style="text-transform:capitalize; color:#555; font-size:0.85rem; margin-top:0.2rem">
+          ${d.weather[0].description}</div>
+        <div class="details">
+          💧 ${d.main.humidity}% &nbsp;|&nbsp; 💨 ${d.wind.speed} m/s &nbsp;|&nbsp; 🌡️ ${d.main.pressure} hPa
+        </div>`;
+      card.onclick = () => { document.getElementById('cityInput').value = d.name; displayCurrentWeather(d); };
+      weatherData.push({ name: d.name, temp: Math.round(d.main.temp), humidity: d.main.humidity });
+    } catch(e) {
+      const card = document.getElementById(`card-${c.name}`);
+      card.innerHTML = `<h3>${c.name}</h3><div style="color:#e74c3c; font-size:0.85rem">Unavailable</div>`;
+      card.className = 'city-card';
+    }
+  }
+  if (weatherData.length) buildCharts(weatherData);
+}
+
+function tempColor(t) {
+  if (t >= 35) return '#E74C3C';
+  if (t >= 25) return '#E67E22';
+  if (t >= 15) return '#27AE60';
+  if (t >= 5)  return '#2E75B6';
+  return '#8E44AD';
+}
+
+// ── CHARTS ───────────────────────────────────────────────────────────────────
+function buildCharts(data) {
+  const maxTemp = Math.max(...data.map(d => d.temp));
+  const maxHumid = 100;
+
+  const tempHtml = data.map(d => `
+    <div class="bar-row">
+      <span class="city-lbl">${d.name}</span>
+      <div class="bar-outer">
+        <div class="bar-inner" style="width:${Math.max(5,(d.temp+10)/(maxTemp+10)*100)}%;
+             background:${tempColor(d.temp)}"></div>
+      </div>
+      <span class="bar-val">${d.temp}°C</span>
+    </div>`).join('');
+
+  const humidHtml = data.map(d => `
+    <div class="bar-row">
+      <span class="city-lbl">${d.name}</span>
+      <div class="bar-outer">
+        <div class="bar-inner" style="width:${d.humidity}%; background:#2E75B6"></div>
+      </div>
+      <span class="bar-val">${d.humidity}%</span>
+    </div>`).join('');
+
+  document.getElementById('tempChart').innerHTML = tempHtml;
+  document.getElementById('humidChart').innerHTML = humidHtml;
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg ? `⚠️ ${msg}` : '';
+  el.style.display = msg ? 'block' : 'none';
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+if (API_KEY !== 'd2d65eb9b452a9b6107de69d9092d24c') {
+  loadCitiesGrid();
+} else {
+  document.getElementById('citiesGrid').innerHTML = `
+    <div style="grid-column:1/-1; background:white; border-radius:12px; padding:2rem; text-align:center; color:#666;">
+      <p style="font-size:1.1rem; margin-bottom:0.5rem">🔑 <strong>API Key Required</strong></p>
+      <p>Get a free API key from <a href="https://openweathermap.org/api" target="_blank" style="color:#1B3A6B">OpenWeatherMap</a>
+         and replace <code>d2d65eb9b452a9b6107de69d9092d24c</code> in the code.</p>
+    </div>`;
+}
+</script>
+</body>
+</html>
